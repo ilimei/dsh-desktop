@@ -1,50 +1,54 @@
+# DSH Desktop
+
+> **中文** | [English](./README.md) · [简体中文](./README.zh-CN.md)
+
 <div align="center">
   <img src="assets/AppIcon-1024.png" width="132" alt="DSH Desktop icon">
   <h1>DSH Desktop</h1>
-  <p><strong>为 <code>@deepseek-ai/dsh</code> 打造的轻量原生 macOS 客户端</strong></p>
-  <p>保留完整 DeepSeek Harness Web Client，只补上桌面应用真正需要的能力。</p>
+  <p><strong>A lightweight, native macOS client for <code>@deepseek-ai/dsh</code></strong></p>
+  <p>Keeps the full DeepSeek Harness Web Client and adds the desktop capabilities an app actually needs.</p>
 </div>
 
-![DSH Desktop 主界面](assets/dsh-desktop-screenshot.png)
+![DSH Desktop main window](assets/dsh-desktop-screenshot.png)
 
-## 为什么做这个客户端
+## Why this client?
 
-DSH 已经拥有完整的 Web Client，不需要再套一层重复的导航和侧边栏。DSH Desktop 使用 Swift、AppKit 与 WKWebView 启动本地 `dsh web`，直接呈现原始界面，并通过一个内置 Client 插件补齐窗口拖拽、macOS 窗口按钮、网络代理等桌面能力。
+DSH already ships a complete Web Client — there was no need to wrap it in another layer of navigation and sidebars. DSH Desktop launches the local `dsh web` with Swift, AppKit, and WKWebView, renders the raw interface directly, and fills in desktop capabilities such as window dragging, macOS window buttons, and a network proxy through a built-in Client plugin.
 
-它不是 Electron，也不重新实现 DSH UI。应用启动时直接调用内置依赖，实测约半秒进入页面。
+It is not Electron, and it does not reimplement the DSH UI. The app launches the bundled runtime directly on startup — it reaches the page in about half a second in practice.
 
-## 功能亮点
+## Highlights
 
-- 完整保留 DSH 原生 Web Client、会话、工作区和设置界面
-- 内置 `@deepseek-ai/dsh` 与 `@zenmux/dsh-plugins`
-- 原生 macOS 圆角窗口、阴影、全屏和标准菜单栏
-- Client 插件绘制 macOS 三色按钮并提供 hover 效果
-- 侧边栏折叠时自动只保留与图标栏对齐的红色关闭按钮
-- 顶部空白区域可拖动窗口，双击可缩放窗口
-- 设置页内置网络代理，支持 HTTP、HTTPS、SOCKS5 与直连名单
-- 代理配置同时用于模型请求、插件和 DSH 更新
-- 启动后后台检查 DSH 新版本，也可手动检查并更新
-- Codex 风格的 DeepSeek 鲸鱼应用图标
+- Full, unmodified DSH Web Client, sessions, workspaces, and settings UI
+- Bundles `@deepseek-ai/dsh` and `@zenmux/dsh-plugins`
+- Native macOS rounded-corner window, shadow, full screen, and standard menu bar
+- Client plugin draws the macOS traffic-light buttons with hover effects
+- When the sidebar collapses, the red close button stays aligned with the icon rail
+- Drag the empty top area to move the window; double-click to zoom
+- Built-in network proxy in Settings, supporting HTTP, HTTPS, SOCKS5, and a direct-connection list
+- Proxy config applies to model requests, plugins, and DSH updates alike
+- Checks for new DSH versions in the background after launch; you can also check and update manually
+- Codex-style DeepSeek whale app icon
 
-## 网络代理
+## Network proxy
 
-打开 `设置 → 网络代理`，可配置代理地址、直连主机列表，也可以一键恢复直连。
+Open `Settings → Network Proxy` to set the proxy address, a list of direct-connection hosts, or restore direct connections with one click.
 
-保存后应用会重新启动 DSH，并为子进程设置 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY`、`NO_PROXY` 和 Node 环境代理开关。本机回环地址始终保持直连。
+After saving, the app restarts DSH and sets `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`, and the Node environment proxy switches for the child process. Local loopback addresses always stay direct-connected.
 
-## 安装
+## Installation
 
-系统要求：
+Requirements:
 
-- macOS 13 或更高版本
-- Apple Silicon（当前 Release 为 arm64）
-- 系统已安装 Node.js
+- macOS 13 or newer
+- Apple Silicon (the current Release is arm64)
+- Node.js installed on the system
 
-从 [Releases](https://github.com/ilimei/dsh-desktop/releases) 下载压缩包，解压后把 `DSH Desktop.app` 移入“应用程序”目录。
+Download the archive from [Releases](https://github.com/ilimei/dsh-desktop/releases), extract it, and move `DSH Desktop.app` into your Applications folder.
 
-## 从源码构建
+## Build from source
 
-需要 Xcode Command Line Tools、Node.js 与 npm：
+You need the Xcode Command Line Tools, Node.js, and npm:
 
 ```bash
 git clone https://github.com/ilimei/dsh-desktop.git
@@ -52,37 +56,37 @@ cd dsh-desktop
 ./build.sh
 ```
 
-首次构建会安装 DSH 与 ZenMux 依赖，产物位于 `dist/DSH Desktop.app`。
+The first build installs the DSH and ZenMux dependencies. The output is at `dist/DSH Desktop.app`.
 
-## 固定签名与分发
+## Signing and distribution
 
-默认构建使用 ad-hoc 签名，仅适合本机开发测试。公开分发应使用固定的 Apple Developer `Developer ID Application` 证书：
+The default build uses ad-hoc signing and is fine only for local development. For public distribution, use a fixed Apple Developer `Developer ID Application` certificate:
 
 ```bash
 DSH_CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./build.sh
 ```
 
-使用 Developer ID 构建时，脚本会启用 Hardened Runtime 和可信时间戳。正式发布前还应使用 `notarytool` 完成 Apple 公证，并执行 `stapler staple`。
+When building with a Developer ID, the script enables the Hardened Runtime and timestamping. Before releasing, you should also complete Apple notarization with `notarytool` and run `stapler staple`.
 
-## 项目结构
+## Project structure
 
 ```text
-DSHClient.swift          原生 AppKit / WKWebView 客户端与更新器
-plugin/                  内置 DSH Web Client 扩展
-assets/                  应用图标、运行截图与图标生成器
-runtime-install/         DSH 与 ZenMux 的依赖清单
-build.sh                 arm64 macOS 构建脚本
+DSHClient.swift          Native AppKit / WKWebView client and updater
+plugin/                  Bundled DSH Web Client extension
+assets/                  App icon, screenshots, and the icon generator
+runtime-install/         DSH and ZenMux dependency manifest
+build.sh                 arm64 macOS build script
 ```
 
-## 技术路线
+## Architecture
 
 ```mermaid
 flowchart LR
-    App["AppKit 原生窗口"] --> WebView["WKWebView"]
-    App --> Process["本地 dsh web"]
+    App["AppKit native window"] --> WebView["WKWebView"]
+    App --> Process["local dsh web"]
     Process --> WebClient["DeepSeek Harness Web Client"]
-    Plugin["内置 Client 插件"] --> WebClient
-    Plugin <-->|"原生消息桥"| App
+    Plugin["bundled Client plugin"] --> WebClient
+    Plugin <-->|"native message bridge"| App
     ZenMux["@zenmux/dsh-plugins"] --> Process
 ```
 
