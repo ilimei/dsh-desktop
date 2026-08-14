@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@deepseek-ai/dsh": "^0.1.0-rc.6",
+    "@zenmux/dsh-plugins": "^0.1.5"
+  }
+}

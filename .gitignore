@@ -1,0 +1,12 @@
+.DS_Store
+dist/
+runtime-install/node_modules/
+bundle-runtime-test/
+plugin-runtime-test*/
+runtime-test*/
+obsolete-*/
+app-smoke.log
+dsh-desktop.patch.yml
+assets/AppIcon.iconset/
+assets/AppIcon.svg
+assets/deepseek-mark-1024.png
