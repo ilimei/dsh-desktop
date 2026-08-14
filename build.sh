@@ -26,5 +26,10 @@ cp "$ROOT/assets/AppIcon.icns" "$CONTENTS/Resources/AppIcon.icns"
 ditto "$ROOT/runtime-install" "$CONTENTS/Resources/runtime"
 ditto "$ROOT/plugin" "$CONTENTS/Resources/runtime/node_modules/dsh-desktop-web-client"
 ditto "$ROOT/plugin" "$CONTENTS/Resources/dsh-desktop-web-client"
-codesign --force --deep --sign - "$APP"
+SIGN_IDENTITY="${DSH_CODESIGN_IDENTITY:--}"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+  codesign --force --deep --sign - "$APP"
+else
+  codesign --force --deep --options runtime --timestamp --sign "$SIGN_IDENTITY" "$APP"
+fi
 echo "$APP"
