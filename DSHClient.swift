@@ -213,6 +213,32 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
         Bundle.main.resourceURL?.appendingPathComponent("runtime", isDirectory: true)
     }
 
+    private func nodeExecutableURL() -> URL? {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var candidates = (ProcessInfo.processInfo.environment["PATH"] ?? "")
+            .split(separator: ":").map { URL(fileURLWithPath: String($0)).appendingPathComponent("node") }
+        candidates += ["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"].map(URL.init(fileURLWithPath:))
+
+        for root in [home.appendingPathComponent(".local/share/fnm/node-versions"), home.appendingPathComponent(".fnm/node-versions")] {
+            let versions = ((try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? [])
+                .sorted { $0.compare($1, options: .numeric) == .orderedDescending }
+            candidates += versions.map { root.appendingPathComponent($0).appendingPathComponent("installation/bin/node") }
+        }
+        let nvmRoot = home.appendingPathComponent(".nvm/versions/node")
+        let nvmVersions = ((try? FileManager.default.contentsOfDirectory(atPath: nvmRoot.path)) ?? [])
+            .sorted { $0.compare($1, options: .numeric) == .orderedDescending }
+        candidates += nvmVersions.map { nvmRoot.appendingPathComponent($0).appendingPathComponent("bin/node") }
+        return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) }
+    }
+
+    private func npmCLIURL(for node: URL) -> URL? {
+        let resolved = node.resolvingSymlinksInPath()
+        let candidates = [node, resolved].map {
+            $0.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("lib/node_modules/npm/bin/npm-cli.js")
+        }
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
     private func activeRuntimeURL() -> URL? {
         if let saved = UserDefaults.standard.string(forKey: "activeRuntimePath") {
             let url = URL(fileURLWithPath: saved, isDirectory: true)
@@ -258,8 +284,8 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
     }
 
     private func startServer() {
-        guard process == nil, let runtime = activeRuntimeURL() else {
-            showStatus(title: "缺少 DSH 运行时", message: "请重新下载完整客户端。", retry: true)
+        guard process == nil, let runtime = activeRuntimeURL(), let node = nodeExecutableURL() else {
+            showStatus(title: "找不到 Node.js", message: "请通过 nvm、fnm 或 Homebrew 安装 Node.js 后重试。", retry: true)
             return
         }
         do { try prepareProfile(runtime: runtime) }
@@ -269,9 +295,8 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
         output = ""
         stopping = false
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        let bin = shellQuote(dshBinary(in: runtime).path)
-        task.arguments = ["-l", "-c", "exec node \(bin) web --port 0"]
+        task.executableURL = node
+        task.arguments = [dshBinary(in: runtime).path, "web", "--port", "0"]
         task.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         var environment = configuredEnvironment()
         environment["DSH_HOME"] = dshHomeURL.path
@@ -383,10 +408,11 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
     @objc func checkForUpdatesFromMenu() { checkForUpdates(automatic: false) }
 
     private func checkForUpdates(automatic: Bool) {
-        guard updateProcess == nil, let runtime = activeRuntimeURL(), let current = runtimeVersion(runtime) else { return }
+        guard updateProcess == nil, let runtime = activeRuntimeURL(), let current = runtimeVersion(runtime),
+              let node = nodeExecutableURL(), let npmCLI = npmCLIURL(for: node) else { return }
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        task.arguments = ["-l", "-c", "npm view @deepseek-ai/dsh version --json"]
+        task.executableURL = node
+        task.arguments = [npmCLI.path, "view", "@deepseek-ai/dsh", "version", "--json"]
         task.environment = configuredEnvironment()
         let pipe = Pipe()
         task.standardOutput = pipe
@@ -424,10 +450,13 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
         let safe = version.replacingOccurrences(of: "/", with: "-")
         let runtime = supportURL.appendingPathComponent("runtimes/\(safe)", isDirectory: true)
         try? FileManager.default.createDirectory(at: runtime, withIntermediateDirectories: true)
+        guard let node = nodeExecutableURL(), let npmCLI = npmCLIURL(for: node) else {
+            showAlert(title: "无法开始更新", message: "找不到 Node.js 或 npm，请检查 nvm、fnm 或 Homebrew 安装。")
+            return
+        }
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        let prefix = shellQuote(runtime.path)
-        task.arguments = ["-l", "-c", "exec npm install --prefix \(prefix) --no-audit --no-fund @deepseek-ai/dsh@\(shellQuote(version)) @zenmux/dsh-plugins@latest"]
+        task.executableURL = node
+        task.arguments = [npmCLI.path, "install", "--prefix", runtime.path, "--no-audit", "--no-fund", "@deepseek-ai/dsh@\(version)", "@zenmux/dsh-plugins@latest"]
         task.environment = configuredEnvironment()
         task.standardOutput = FileHandle.nullDevice
         task.standardError = FileHandle.nullDevice

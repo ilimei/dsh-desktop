@@ -41,8 +41,8 @@ After saving, the app restarts DSH and sets `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PR
 Requirements:
 
 - macOS 13 or newer
-- Apple Silicon (the current Release is arm64)
-- Node.js installed on the system
+- Apple Silicon or Intel Mac (download the matching Release asset)
+- Node.js installed with nvm, fnm, Homebrew, or another standard installation
 
 Download the archive from [Releases](https://github.com/ilimei/dsh-desktop/releases), extract it, and move `DSH Desktop.app` into your Applications folder.
 
@@ -57,6 +57,14 @@ cd dsh-desktop
 ```
 
 The first build installs the DSH and ZenMux dependencies. The output is at `dist/DSH Desktop.app`.
+
+To cross-build the Intel version on an Apple Silicon Mac with Rosetta installed:
+
+```bash
+./build-x86_64.sh
+```
+
+The Intel output is at `dist-x86_64/DSH Desktop.app`. Its npm runtime is installed separately so native Node modules match x86_64.
 
 ## Signing and distribution
 
@@ -76,6 +84,7 @@ plugin/                  Bundled DSH Web Client extension
 assets/                  App icon, screenshots, and the icon generator
 runtime-install/         DSH and ZenMux dependency manifest
 build.sh                 arm64 macOS build script
+build-x86_64.sh          Intel x86_64 macOS cross-build script
 ```
 
 ## Architecture

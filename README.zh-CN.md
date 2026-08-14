@@ -41,8 +41,8 @@ DSH 已经拥有完整的 Web Client，不需要再套一层重复的导航和�
 系统要求：
 
 - macOS 13 或更高版本
-- Apple Silicon（当前 Release 为 arm64）
-- 系统已安装 Node.js
+- Apple Silicon 或 Intel Mac（请下载对应架构的 Release 安装包）
+- 使用 nvm、fnm、Homebrew 或其他标准方式安装 Node.js
 
 从 [Releases](https://github.com/ilimei/dsh-desktop/releases) 下载压缩包，解压后把 `DSH Desktop.app` 移入“应用程序”目录。
 
@@ -57,6 +57,14 @@ cd dsh-desktop
 ```
 
 首次构建会安装 DSH 与 ZenMux 依赖，产物位于 `dist/DSH Desktop.app`。
+
+在已安装 Rosetta 的 Apple Silicon Mac 上交叉构建 Intel 版本：
+
+```bash
+./build-x86_64.sh
+```
+
+Intel 产物位于 `dist-x86_64/DSH Desktop.app`。它使用独立的 npm 运行时目录，确保 Node 原生模块为 x86_64 架构。
 
 ## 固定签名与分发
 
@@ -76,6 +84,7 @@ plugin/                  内置 DSH Web Client 扩展
 assets/                  应用图标、运行截图与图标生成器
 runtime-install/         DSH 与 ZenMux 的依赖清单
 build.sh                 arm64 macOS 构建脚本
+build-x86_64.sh          Intel x86_64 macOS 交叉构建脚本
 ```
 
 ## 技术路线

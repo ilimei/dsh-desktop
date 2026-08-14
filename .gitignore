@@ -1,6 +1,8 @@
 .DS_Store
 dist/
+dist-x86_64/
 runtime-install/node_modules/
+runtime-install-x86_64/
 bundle-runtime-test/
 plugin-runtime-test*/
 runtime-test*/

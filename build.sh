@@ -2,7 +2,10 @@
 set -euo pipefail
 
 ROOT="${0:A:h}"
-APP="$ROOT/dist/DSH Desktop.app"
+BUILD_ARCH="${DSH_BUILD_ARCH:-arm64}"
+DIST_DIR="${DSH_DIST_DIR:-dist}"
+RUNTIME_PATH="${DSH_RUNTIME_PATH:-$ROOT/runtime-install}"
+APP="$ROOT/$DIST_DIR/DSH Desktop.app"
 CONTENTS="$APP/Contents"
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
@@ -10,8 +13,8 @@ if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -f "$ROOT/runtime-install/node_modules/@deepseek-ai/dsh/lib/bin.js" ]]; then
-  npm install --prefix "$ROOT/runtime-install" --no-audit --no-fund
+if [[ ! -f "$RUNTIME_PATH/node_modules/@deepseek-ai/dsh/lib/bin.js" ]]; then
+  npm install --prefix "$RUNTIME_PATH" --no-audit --no-fund
 fi
 
 rm -rf "$APP"
@@ -20,10 +23,10 @@ swiftc "$ROOT/DSHClient.swift" \
   -o "$CONTENTS/MacOS/DSHDesktop" \
   -framework AppKit -framework WebKit \
   -parse-as-library \
-  -target arm64-apple-macos13.0
+  -target "$BUILD_ARCH-apple-macos13.0"
 cp "$ROOT/Info.plist" "$CONTENTS/Info.plist"
 cp "$ROOT/assets/AppIcon.icns" "$CONTENTS/Resources/AppIcon.icns"
-ditto "$ROOT/runtime-install" "$CONTENTS/Resources/runtime"
+ditto "$RUNTIME_PATH" "$CONTENTS/Resources/runtime"
 ditto "$ROOT/plugin" "$CONTENTS/Resources/runtime/node_modules/dsh-desktop-web-client"
 ditto "$ROOT/plugin" "$CONTENTS/Resources/dsh-desktop-web-client"
 SIGN_IDENTITY="${DSH_CODESIGN_IDENTITY:--}"
