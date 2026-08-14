@@ -1,4 +1,5 @@
 import AppKit
+import Security
 import WebKit
 
 @main
@@ -130,6 +131,14 @@ final class NativeDragBridge: NSObject, WKScriptMessageHandler {
         }
         if action == "proxy:save" {
             controller?.saveProxySettings(message.body as? [String: Any] ?? [:])
+            return
+        }
+        if action == "gateway:get" {
+            controller?.publishGatewaySettings()
+            return
+        }
+        if action == "gateway:save" {
+            controller?.saveGatewaySettings(message.body as? [String: Any] ?? [:])
             return
         }
         if action == "zoom" {
@@ -378,11 +387,90 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
         if body["restart"] as? Bool ?? true { restartServer() }
     }
 
+    func publishGatewaySettings() {
+        let detail: [String: Any] = [
+            "deepseekBaseURL": UserDefaults.standard.string(forKey: "deepseekBaseURL") ?? "",
+            "hasAPIKey": deepSeekAPIKey() != nil
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: detail),
+              let json = String(data: data, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.dispatchEvent(new CustomEvent('dsh-desktop-gateway',{detail:\(json)}))")
+    }
+
+    func saveGatewaySettings(_ body: [String: Any]) {
+        let value = (body["deepseekBaseURL"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let apiKey = (body["apiKey"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let clearAPIKey = body["clearAPIKey"] as? Bool ?? false
+        if !value.isEmpty {
+            guard let url = URL(string: value), ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+                  url.host != nil, url.user == nil, url.password == nil else {
+                showAlert(title: "Base URL 无效", message: "请输入有效的 http:// 或 https:// 地址，且不要包含用户名或密码。")
+                return
+            }
+        }
+        do {
+            if clearAPIKey { try storeDeepSeekAPIKey(nil) }
+            else if !apiKey.isEmpty { try storeDeepSeekAPIKey(apiKey) }
+        } catch {
+            showAlert(title: "无法保存 API Key", message: error.localizedDescription)
+            return
+        }
+        UserDefaults.standard.set(value, forKey: "deepseekBaseURL")
+        if body["restart"] as? Bool ?? true { restartServer() }
+    }
+
+    private func deepSeekAPIKey() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "ai.deepseek.dsh.desktop",
+            kSecAttrAccount as String: "DEEPSEEK_API_KEY",
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let value = String(data: data, encoding: .utf8), !value.isEmpty else { return nil }
+        return value
+    }
+
+    private func storeDeepSeekAPIKey(_ value: String?) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "ai.deepseek.dsh.desktop",
+            kSecAttrAccount as String: "DEEPSEEK_API_KEY"
+        ]
+        if let value {
+            let data = Data(value.utf8)
+            let update = [kSecValueData as String: data]
+            let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+            if status == errSecItemNotFound {
+                var item = query
+                item[kSecValueData as String] = data
+                item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+                let addStatus = SecItemAdd(item as CFDictionary, nil)
+                guard addStatus == errSecSuccess else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(addStatus)) }
+            } else if status != errSecSuccess {
+                throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+            }
+        } else {
+            let status = SecItemDelete(query as CFDictionary)
+            guard status == errSecSuccess || status == errSecItemNotFound else {
+                throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+            }
+        }
+    }
+
     private func configuredEnvironment() -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
+        environment.removeValue(forKey: "DEEPSEEK_BASE_URL")
         let proxyKeys = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "all_proxy", "no_proxy", "NODE_USE_ENV_PROXY", "GLOBAL_AGENT_HTTP_PROXY"]
         for key in proxyKeys { environment.removeValue(forKey: key) }
         let defaults = UserDefaults.standard
+        if let apiKey = deepSeekAPIKey() { environment["DEEPSEEK_API_KEY"] = apiKey }
+        if let baseURL = defaults.string(forKey: "deepseekBaseURL")?.trimmingCharacters(in: .whitespacesAndNewlines), !baseURL.isEmpty {
+            environment["DEEPSEEK_BASE_URL"] = baseURL
+        }
         guard defaults.bool(forKey: "proxyEnabled"),
               let proxyURL = defaults.string(forKey: "proxyURL")?.trimmingCharacters(in: .whitespacesAndNewlines),
               !proxyURL.isEmpty else { return environment }

@@ -21,7 +21,7 @@ rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 swiftc "$ROOT/DSHClient.swift" \
   -o "$CONTENTS/MacOS/DSHDesktop" \
-  -framework AppKit -framework WebKit \
+  -framework AppKit -framework Security -framework WebKit \
   -parse-as-library \
   -target "$BUILD_ARCH-apple-macos13.0"
 cp "$ROOT/Info.plist" "$CONTENTS/Info.plist"

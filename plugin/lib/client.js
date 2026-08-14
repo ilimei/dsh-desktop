@@ -74,6 +74,91 @@ window.__ModuleLoader__.load({
       ] });
     }
 
+    function GatewaySettings() {
+      const [baseURL, setBaseURL] = React.useState("");
+      const [apiKey, setAPIKey] = React.useState("");
+      const [hasAPIKey, setHasAPIKey] = React.useState(false);
+      const [status, setStatus] = React.useState("");
+      const bridge = window.webkit?.messageHandlers?.dshDesktopDrag;
+
+      React.useEffect(() => {
+        const receive = (event) => {
+          setBaseURL(event.detail?.deepseekBaseURL || "");
+          setHasAPIKey(Boolean(event.detail?.hasAPIKey));
+        };
+        window.addEventListener("dsh-desktop-gateway", receive);
+        bridge?.postMessage({ action: "gateway:get" });
+        return () => window.removeEventListener("dsh-desktop-gateway", receive);
+      }, []);
+
+      const normalized = baseURL.trim().replace(/\/+$/, "");
+      let valid = true;
+      if (normalized) {
+        try {
+          const parsed = new URL(normalized);
+          valid = (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.username && !parsed.password;
+        } catch { valid = false; }
+      }
+      const save = (value, clearAPIKey = false) => {
+        bridge?.postMessage({ action: "gateway:save", deepseekBaseURL: value, apiKey, clearAPIKey, restart: true });
+        setBaseURL(value);
+        if (clearAPIKey) setHasAPIKey(false);
+        else if (apiKey.trim()) setHasAPIKey(true);
+        setAPIKey("");
+        setStatus("已保存，正在重新启动 DSH…");
+      };
+
+      return jsxs("section", { className: "dsh-desktop-proxy-page", children: [
+        jsx("h2", { children: "LLM Gateway" }),
+        jsx("p", { className: "dsh-desktop-proxy-hint", children: "设置 DeepSeek 模型请求使用的 Base URL。保存后会重新启动 DSH。" }),
+        jsxs("label", { className: "dsh-desktop-proxy-field", children: [
+          jsx("span", { children: "DeepSeek Base URL" }),
+          jsx("input", {
+            value: baseURL,
+            placeholder: "https://api.deepseek.com",
+            spellCheck: false,
+            autoCapitalize: "none",
+            onChange: (event) => { setBaseURL(event.target.value); setStatus(""); }
+          })
+        ] }),
+        jsx("p", { className: "dsh-desktop-proxy-note", children: valid ? "留空使用 DeepSeek 官方默认地址；DSH 会自动追加 /chat/completions。" : "请输入有效的 http:// 或 https:// 地址，且不要包含用户名或密码。" }),
+        jsxs("label", { className: "dsh-desktop-proxy-field", children: [
+          jsxs("span", { children: ["DeepSeek API Key", hasAPIKey && jsx("small", { className: "dsh-desktop-key-state", children: "已存入钥匙串" })] }),
+          jsx("input", {
+            type: "password",
+            value: apiKey,
+            placeholder: hasAPIKey ? "已配置；留空保持不变" : "输入 API Key",
+            spellCheck: false,
+            autoComplete: "new-password",
+            onChange: (event) => { setAPIKey(event.target.value); setStatus(""); }
+          })
+        ] }),
+        jsx("p", { className: "dsh-desktop-proxy-note", children: "API Key 安全存储在 macOS 钥匙串中，不会写入应用偏好设置或日志。" }),
+        jsxs("div", { className: "dsh-desktop-proxy-actions", children: [
+          hasAPIKey && jsx("button", {
+            type: "button",
+            className: "dsh-desktop-proxy-secondary",
+            onClick: () => save(normalized, true),
+            children: "清除 API Key"
+          }),
+          jsx("button", {
+            type: "button",
+            className: "dsh-desktop-proxy-secondary",
+            onClick: () => save(""),
+            children: "恢复默认"
+          }),
+          jsx("button", {
+            type: "button",
+            className: "dsh-desktop-proxy-primary",
+            disabled: !valid,
+            onClick: () => save(normalized),
+            children: "保存并重启 DSH"
+          })
+        ] }),
+        status && jsx("div", { className: "dsh-desktop-proxy-status", children: status })
+      ] });
+    }
+
     function apply(ctx) {
       ctx.effect(() => {
         const bridge = window.webkit?.messageHandlers?.dshDesktopDrag;
@@ -156,6 +241,7 @@ window.__ModuleLoader__.load({
           }
           .dsh-desktop-proxy-field input:focus { border-color: var(--dsw-alias-brand-primary); }
           .dsh-desktop-proxy-field input:disabled { opacity: .45; }
+          .dsh-desktop-key-state { margin-left: 8px; color: var(--dsw-alias-state-success-primary); font-size: 11px; font-weight: 500; }
           .dsh-desktop-proxy-actions { display: flex; justify-content: flex-end; gap: 10px; }
           .dsh-desktop-proxy-actions button { height: 38px; padding: 0 16px; border-radius: 19px; border: 0; cursor: pointer; }
           .dsh-desktop-proxy-primary { background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); }
@@ -214,6 +300,12 @@ window.__ModuleLoader__.load({
         order: 18,
         label: () => "网络代理"
       }, ProxySettings));
+      ctx.slots.inject("settings.section", () => ctx.slots.register({
+        name: "settings.section",
+        id: "desktop-llm-gateway",
+        order: 19,
+        label: () => "LLM Gateway"
+      }, GatewaySettings));
     }
 
     exports.apply = apply;

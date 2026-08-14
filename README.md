@@ -26,6 +26,7 @@ It is not Electron, and it does not reimplement the DSH UI. The app launches the
 - When the sidebar collapses, the red close button stays aligned with the icon rail
 - Drag the empty top area to move the window; double-click to zoom
 - Built-in network proxy in Settings, supporting HTTP, HTTPS, SOCKS5, and a direct-connection list
+- Configurable DeepSeek Base URL and API Key, with the key stored in macOS Keychain
 - Proxy config applies to model requests, plugins, and DSH updates alike
 - Checks for new DSH versions in the background after launch; you can also check and update manually
 - Codex-style DeepSeek whale app icon
@@ -35,6 +36,12 @@ It is not Electron, and it does not reimplement the DSH UI. The app launches the
 Open `Settings → Network Proxy` to set the proxy address, a list of direct-connection hosts, or restore direct connections with one click.
 
 After saving, the app restarts DSH and sets `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`, and the Node environment proxy switches for the child process. Local loopback addresses always stay direct-connected.
+
+## LLM Gateway
+
+Open `Settings → LLM Gateway` to override `DEEPSEEK_BASE_URL` and configure `DEEPSEEK_API_KEY`. Leave the Base URL blank to use DeepSeek's official endpoint; DSH appends `/chat/completions` automatically.
+
+The API Key is stored in macOS Keychain and is never written to app preferences or logs. Saving or clearing gateway settings restarts the local DSH process so the new environment takes effect.
 
 ## Installation
 

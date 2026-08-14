@@ -26,6 +26,7 @@ DSH 已经拥有完整的 Web Client，不需要再套一层重复的导航和�
 - 侧边栏折叠时自动只保留与图标栏对齐的红色关闭按钮
 - 顶部空白区域可拖动窗口，双击可缩放窗口
 - 设置页内置网络代理，支持 HTTP、HTTPS、SOCKS5 与直连名单
+- 可配置 DeepSeek Base URL 和 API Key，Key 安全存储在 macOS 钥匙串
 - 代理配置同时用于模型请求、插件和 DSH 更新
 - 启动后后台检查 DSH 新版本，也可手动检查并更新
 - Codex 风格的 DeepSeek 鲸鱼应用图标
@@ -35,6 +36,12 @@ DSH 已经拥有完整的 Web Client，不需要再套一层重复的导航和�
 打开 `设置 → 网络代理`，可配置代理地址、直连主机列表，也可以一键恢复直连。
 
 保存后应用会重新启动 DSH，并为子进程设置 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY`、`NO_PROXY` 和 Node 环境代理开关。本机回环地址始终保持直连。
+
+## LLM Gateway
+
+打开“设置 → LLM Gateway”可覆盖 `DEEPSEEK_BASE_URL` 并配置 `DEEPSEEK_API_KEY`。Base URL 留空时使用 DeepSeek 官方地址，DSH 会自动追加 `/chat/completions`。
+
+API Key 存储在 macOS 钥匙串中，不会写入应用偏好设置或日志。保存或清除 Gateway 配置后，应用会重启本地 DSH 进程以应用新的环境变量。
 
 ## 安装
 
