@@ -511,7 +511,7 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
               let node = nodeExecutableURL(), let npmCLI = npmCLIURL(for: node) else { return }
         let task = Process()
         task.executableURL = node
-        task.arguments = [npmCLI.path, "view", "@deepseek-ai/dsh", "version", "--json"]
+        task.arguments = [npmCLI.path, "view", "@deepseek-ai/dsh", "version", "--json", "--registry", "https://registry.npmjs.org"]
         task.environment = configuredEnvironment()
         let pipe = Pipe()
         task.standardOutput = pipe
