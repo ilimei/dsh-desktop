@@ -464,7 +464,13 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
     private func configuredEnvironment() -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
         environment.removeValue(forKey: "DEEPSEEK_BASE_URL")
-        let proxyKeys = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "all_proxy", "no_proxy", "NODE_USE_ENV_PROXY", "GLOBAL_AGENT_HTTP_PROXY"]
+        let proxyKeys = [
+            "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
+            "http_proxy", "https_proxy", "all_proxy", "no_proxy",
+            "NODE_USE_ENV_PROXY", "GLOBAL_AGENT_HTTP_PROXY",
+            "npm_config_proxy", "npm_config_http_proxy", "npm_config_https_proxy",
+            "npm_config_no_proxy", "npm_config_registry"
+        ]
         for key in proxyKeys { environment.removeValue(forKey: key) }
         let defaults = UserDefaults.standard
         if let apiKey = deepSeekAPIKey() { environment["DEEPSEEK_API_KEY"] = apiKey }
@@ -482,6 +488,11 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
         environment["no_proxy"] = noProxy
         environment["NODE_USE_ENV_PROXY"] = "1"
         environment["GLOBAL_AGENT_HTTP_PROXY"] = proxyURL
+        environment["npm_config_proxy"] = proxyURL
+        environment["npm_config_http_proxy"] = proxyURL
+        environment["npm_config_https_proxy"] = proxyURL
+        environment["npm_config_no_proxy"] = noProxy
+        environment["npm_config_registry"] = "https://registry.npmjs.org"
         return environment
     }
 
@@ -544,7 +555,7 @@ final class MainWindowController: NSWindowController, WKNavigationDelegate, WKUI
         }
         let task = Process()
         task.executableURL = node
-        task.arguments = [npmCLI.path, "install", "--prefix", runtime.path, "--no-audit", "--no-fund", "@deepseek-ai/dsh@\(version)", "@zenmux/dsh-plugins@latest"]
+        task.arguments = [npmCLI.path, "install", "--registry", "https://registry.npmjs.org", "--prefix", runtime.path, "--no-audit", "--no-fund", "@deepseek-ai/dsh@\(version)", "@zenmux/dsh-plugins@latest"]
         task.environment = configuredEnvironment()
         task.standardOutput = FileHandle.nullDevice
         task.standardError = FileHandle.nullDevice
